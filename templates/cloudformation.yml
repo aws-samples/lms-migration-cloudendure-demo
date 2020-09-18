@@ -1,0 +1,70 @@
+Description: This template creates prereqs for CloudEndure Migration - Moodle lab
+
+Parameters:
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: "Name of an existing EC2 KeyPair to enable SSH access to the instance"
+
+Resources:
+  CEUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: cloudendure-user
+  CEPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        {
+          "Version": "2012-10-17",
+          "Statement": [{ "Effect": "Allow", "Action": "*", "Resource": "*" }],
+        }
+      PolicyName: cloudendure-policy
+      Users:
+        - !Ref CEUser
+  IAMKeys:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref CEUser
+  MoodleSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupName: moodle-sg
+      GroupDescription: HTTP(S)
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: "80"
+          ToPort: "80"
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: "443"
+          ToPort: "443"
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: moodle-sg
+  MoodleEC2:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      ImageId: ami-0c7ddc9b624bac9c5
+      InstanceType: t2.micro
+      SecurityGroupIds:
+        - !Ref MoodleSecurityGroup
+      KeyName: !Ref KeyPairName
+      Tags:
+        - Key: Name
+          Value: moodle-lms
+
+Outputs:
+  AccessKey:
+    Description: IAM user Access Key for CloudEndure
+    Value: !Ref IAMKeys
+  SecretAccessKey:
+    Description: IAM user Secret Access Key for CloudEndure
+    Value: !GetAtt IAMKeys.SecretAccessKey
+  MoodlePublicIp:
+    Description: Moodle public IP
+    Value: !GetAtt MoodleEC2.PublicIp
